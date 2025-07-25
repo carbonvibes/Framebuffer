@@ -389,11 +389,19 @@ All critical sections are protected by mutexes to prevent race conditions in mul
 ## Steps to reproduce the project:
 1. **Clone the Repository**: Get the source code from my GitHub repository.
 2. **Build the Kernel Module**: Use the provided Makefile to compile the module against your kernel headers.
-3. **Load the Module**: Use `sudo insmod *.ko` to load the module into the kernel.
-4. **Check `/proc` Interfaces**: Verify that the `/proc/drm_fb_pixels` and `/proc/drm_fb_raw` interfaces are available.
-5. **Check dmesg Logs**: Use `dmesg` to view debug output and ensure the module is functioning correctly.
-6. **Use the Command** `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png` to capture the framebuffer data and convert it to an image.
-7. **Unload the Module**: Use `sudo rmmod <module_name>` to safely remove the module when done.
+3. **Disable Secure Boot**: Ensure that Secure Boot is disabled in your BIOS/UEFI settings, as it prevents loading unsigned kernel modules.
+4. **Download Kernel Headers**: Make sure you have the correct kernel headers installed for your running kernel version.
+   - On Debian/Ubuntu, you can install them using `sudo apt-get install linux-headers-$(uname -r)`.
+   - On Fedora/RHEL, use `sudo dnf install kernel-devel kernel-headers`.
+   - On Arch Linux, use `sudo pacman -S linux-headers`.
+   - On openSUSE, use `sudo zypper install kernel-devel kernel-headers`.
+5. **Make**: Run `make` in the module directory to compile the kernel module.
+6. **Load the Module**: Use `sudo insmod *.ko` to load the module into the kernel.
+7. **Check lsmod**: Verify that the module is loaded by running `lsmod | grep <module_name>`.
+8. **Check dmesg Logs**: Use `dmesg` to view debug output and ensure the module is functioning correctly.
+9. **Check `/proc` Interfaces**: Verify that the `/proc/drm_fb_pixels` and `/proc/drm_fb_raw` interfaces are available.
+10. **Use the Command** `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png` to capture the framebuffer data and convert it to an image.
+11. **Unload the Module**: Use `sudo rmmod <module_name>` to safely remove the module when done.
 
 ### Fixing the latency issue:
 I changed the way I tested the latency, initially I was using a shellscript that was running the commands `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png & python3 script.py` and then checking the time recorded by the stopwatch on the screenshots. But then I learned that running the shellscript and using `&` bash command introduces additional latency due to process scheduling and context switching. So, I changed to using the `parallel` command to run both commands in parallel without the `&` operator, which allows for better CPU core utilization and reduces the overhead of process management.
@@ -407,3 +415,6 @@ This is the command I used to run both commands in parallel:
 ``` 
 
 Doing this reduced the latency to around 60ms, which is significantly better than the initial 150ms.
+
+### Current Work:
+I think that blocking a frame once our detection algorithm flags it isn’t feasible in the current setup. We’re already about 60 ms thats roughly four frames behind what’s actually being scanned out. By the time we receive a frame for analysis, four newer frames are either on-screen or in the pipeline, so even if the detection algo takes sub-16 ms decision it still arrives too late to stop that frame (and several successors) from appearing. I think stopping a frame after it has already been queued for scan-out is almost impossible and needs to implemented in the driver level ig. A more practical strategy is to draw a cursor style overlay plane that masks the malicious frame content instead of trying to block the frame itself. I’m working on getting that overlay approach working. I'm currently also exploring the possibility of delaying the frame from getting scanned out on the subsequent vblank event.
