@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_realtime/modules.order := {   echo /home/carbon/Documents/WashU/bpf/ebpf/km_realtime/vblank_capture.ko; :; } | awk '!x[$$0]++' - > /home/carbon/Documents/WashU/bpf/ebpf/km_realtime/modules.order

@@ -1,0 +1,33 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Intel i915 Atomic Commit Tail Tracer (Basic Working Version)
+ */
+
+BEGIN {
+    printf("Intel i915 Atomic Commit Tail Tracer Started\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    @count = 0;
+}
+
+fentry:i915:intel_atomic_commit_tail {
+    @count++;
+    printf("[%s] INTEL_ATOMIC_COMMIT_TAIL #%d: %s (PID: %d)\n",
+           strftime("%H:%M:%S", nsecs), @count, comm, pid);
+    printf("  State: %p\n", args->state);
+    @entry_time[tid] = nsecs;
+}
+
+fexit:i915:intel_atomic_commit_tail {
+    if (@entry_time[tid] > 0) {
+        $duration_us = (nsecs - @entry_time[tid]) / 1000;
+        printf("  Duration: %lu μs\n", $duration_us);
+        delete(@entry_time[tid]);
+    }
+}
+
+END {
+    printf("Total calls: %lu\n", @count);
+    clear(@count);
+    clear(@entry_time);
+}

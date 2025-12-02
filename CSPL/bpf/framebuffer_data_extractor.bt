@@ -1,0 +1,264 @@
+#!/usr/bin/env bpftrace
+
+BEGIN {
+    printf("Advanced Framebuffer Data Extractor\n");
+    printf("This script attempts to capture actual framebuffer pixel data\n");
+    printf("WARNING: This may generate large amounts of data!\n");
+    printf("Start time: %lu ns\n", nsecs);
+    
+    // Configuration
+    @max_data_capture = 1024; // Max bytes to capture per operation
+    @capture_enabled = 1;     // Toggle data capture
+}
+
+// Capture framebuffer write operations with actual data
+tracepoint:i915:i915_gem_object_pwrite {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    printf("FB_WRITE: obj=%p offset=%lu size=%lu\n", $obj, $offset, $size);
+    
+    // Store metadata about the write
+    @write_operations[nsecs] = $obj;
+    @write_sizes[nsecs] = $size;
+    @write_offsets[nsecs] = $offset;
+    
+    // Increment counters for this object
+    @object_write_count[$obj]++;
+    @total_bytes_written += $size;
+    
+    if ($size > 1024*1024) { // Large write, likely full or partial framebuffer
+        printf("  -> LARGE_FB_WRITE: %lu bytes - potential full frame update\n", $size);
+        @large_writes[$obj]++;
+        
+        // Calculate potential resolution if this is a framebuffer
+        // Common pixel formats: 24-bit RGB, 32-bit RGBA
+        $pixels_24bit = $size / 3;
+        $pixels_32bit = $size / 4;
+        
+        printf("  -> POTENTIAL_PIXELS: %lu (24-bit) or %lu (32-bit)\n", 
+               $pixels_24bit, $pixels_32bit);
+        
+        // Try to estimate resolution
+        $width_1080p_24 = $pixels_24bit / 1080;
+        $width_1080p_32 = $pixels_32bit / 1080;
+        $width_720p_24 = $pixels_24bit / 720;
+        $width_720p_32 = $pixels_32bit / 720;
+        
+        if ($width_1080p_24 >= 1920 && $width_1080p_24 <= 1922) {
+            printf("  -> DETECTED_RESOLUTION: Likely 1920x1080 24-bit\n");
+        }
+        if ($width_1080p_32 >= 1920 && $width_1080p_32 <= 1922) {
+            printf("  -> DETECTED_RESOLUTION: Likely 1920x1080 32-bit\n");
+        }
+        if ($width_720p_24 >= 1280 && $width_720p_24 <= 1282) {
+            printf("  -> DETECTED_RESOLUTION: Likely 1280x720 24-bit\n");
+        }
+        if ($width_720p_32 >= 1280 && $width_720p_32 <= 1282) {
+            printf("  -> DETECTED_RESOLUTION: Likely 1280x720 32-bit\n");
+        }
+    }
+}
+
+// Capture smaller writes that might be partial updates
+tracepoint:i915:i915_gem_object_pwrite /args->size < 1024*1024 && args->size > 1024/ {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    printf("PARTIAL_FB_WRITE: obj=%p offset=%lu size=%lu\n", $obj, $offset, $size);
+    @partial_writes[$obj]++;
+    
+    // This might be a dirty rectangle update
+    $pixels = $size / 4; // Assume 32-bit pixels
+    printf("  -> DIRTY_RECT: ~%lu pixels updated\n", $pixels);
+}
+
+// Track memory mapping operations (when framebuffers are mapped to userspace)
+kprobe:i915_gem_mmap_ioctl {
+    printf("GEM_MMAP: Application mapping GEM object to userspace\n");
+    @mmap_operations++;
+}
+
+// Hook into page fault handler to detect framebuffer access patterns
+kprobe:i915_gem_fault {
+    $vma = arg0;
+    $vmf = arg1;
+    
+    printf("GEM_FAULT: Page fault in GEM object\n");
+    @gem_faults++;
+}
+
+// Try to hook into the actual framebuffer update functions
+kprobe:intel_plane_atomic_update {
+    printf("PLANE_ATOMIC_UPDATE: Hardware plane being updated\n");
+    @plane_atomic_updates++;
+}
+
+// Hook into DMA operations (framebuffer transfers)
+kprobe:i915_gem_object_set_to_gtt_domain {
+    printf("GEM_GTT_DOMAIN: Setting object to GTT domain (preparing for display)\n");
+    @gtt_domain_sets++;
+}
+
+kprobe:i915_gem_object_set_to_cpu_domain {
+    printf("GEM_CPU_DOMAIN: Setting object to CPU domain (CPU access)\n");
+    @cpu_domain_sets++;
+}
+
+// Monitor when the GPU actually starts/finishes rendering
+kprobe:i915_request_add {
+    printf("GPU_REQUEST_ADD: New GPU work submitted\n");
+    @gpu_requests++;
+}
+
+kprobe:i915_request_retire {
+    printf("GPU_REQUEST_RETIRE: GPU work completed\n");
+    @gpu_retires++;
+}
+
+// Track flip operations (when new framebuffers are displayed)
+kprobe:intel_atomic_commit_ready {
+    printf("ATOMIC_COMMIT_READY: New frame ready for display\n");
+    @atomic_commits++;
+}
+
+// Try to capture actual pixel data during small writes
+tracepoint:i915:i915_gem_object_pwrite /args->size <= 64 && @capture_enabled/ {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    printf("PIXEL_DATA_CAPTURE: obj=%p offset=%lu size=%lu\n", $obj, $offset, $size);
+    
+    // Note: eBPF has limitations on reading arbitrary memory
+    // This is a conceptual approach - actual implementation would need
+    // to work within eBPF's memory access constraints
+    
+    @small_writes_captured++;
+}
+
+// Monitor framebuffer format changes
+kprobe:intel_plane_atomic_check {
+    printf("PLANE_ATOMIC_CHECK: Validating plane configuration\n");
+    @plane_checks++;
+}
+
+// Track when framebuffers are actually scanned out to display
+tracepoint:drm:drm_vblank_event {
+    $crtc = args->crtc;
+    $seq = args->seq;
+    
+    printf("SCANOUT_EVENT: crtc=%d seq=%u - Frame displayed\n", $crtc, $seq);
+    
+    // Track frame rate
+    if (@last_vblank_time[$crtc] != 0) {
+        $frame_time = nsecs - @last_vblank_time[$crtc];
+        $fps = 1000000000 / $frame_time; // Rough FPS calculation
+        printf("  -> FRAME_TIME: %lu ns (~%lu FPS)\n", $frame_time, $fps);
+        @frame_times = hist($frame_time);
+    }
+    @last_vblank_time[$crtc] = nsecs;
+}
+
+// Periodic data summary
+interval:s:10 {
+    printf("\n=== FRAMEBUFFER DATA EXTRACTION SUMMARY ===\n");
+    
+    printf("--- Write Operations ---\n");
+    printf("Objects with writes:\n");
+    print(@object_write_count);
+    printf("Large writes per object:\n");
+    print(@large_writes);
+    printf("Partial writes per object:\n");
+    print(@partial_writes);
+    printf("Total bytes written: %lu\n", @total_bytes_written);
+    
+    printf("\n--- GPU Operations ---\n");
+    printf("GPU requests submitted: %lu\n", @gpu_requests);
+    printf("GPU requests completed: %lu\n", @gpu_retires);
+    printf("Atomic commits: %lu\n", @atomic_commits);
+    printf("Plane updates: %lu\n", @plane_atomic_updates);
+    
+    printf("\n--- Memory Operations ---\n");
+    printf("GEM mmap operations: %lu\n", @mmap_operations);
+    printf("GEM faults: %lu\n", @gem_faults);
+    printf("GTT domain sets: %lu\n", @gtt_domain_sets);
+    printf("CPU domain sets: %lu\n", @cpu_domain_sets);
+    
+    printf("\n--- Frame Timing ---\n");
+    printf("Frame time distribution:\n");
+    print(@frame_times);
+    
+    printf("--- Small Writes Captured ---\n");
+    printf("Small writes captured: %lu\n", @small_writes_captured);
+    
+    printf("===============================================\n\n");
+    
+    // Reset some counters
+    @total_bytes_written = 0;
+}
+
+// Function to try to extract memory content (conceptual)
+// Note: This would require more advanced eBPF programming with proper memory access
+kprobe:copy_from_user /arg2 <= 1024/ {
+    $to = arg0;
+    $from = arg1;
+    $size = arg2;
+    
+    printf("COPY_FROM_USER: to=%p from=%p size=%lu\n", $to, $from, $size);
+    
+    // This could potentially capture user data being written to kernel
+    // In a real implementation, you'd need to:
+    // 1. Verify this is graphics-related
+    // 2. Use bpf_probe_read_user() to safely read user memory
+    // 3. Store data in eBPF maps
+    // 4. Export data to userspace
+    
+    @copy_from_user_ops++;
+}
+
+kprobe:copy_to_user /arg2 <= 1024/ {
+    $to = arg0;
+    $from = arg1;
+    $size = arg2;
+    
+    printf("COPY_TO_USER: to=%p from=%p size=%lu\n", $to, $from, $size);
+    @copy_to_user_ops++;
+}
+
+END {
+    printf("\n=== FINAL FRAMEBUFFER EXTRACTION REPORT ===\n");
+    
+    printf("--- Write Statistics ---\n");
+    printf("Objects with write operations:\n");
+    print(@object_write_count);
+    printf("Large framebuffer writes:\n");
+    print(@large_writes);
+    printf("Partial updates:\n");
+    print(@partial_writes);
+    
+    printf("\n--- Hardware Operations ---\n");
+    printf("Total GPU requests: %lu\n", @gpu_requests);
+    printf("Total GPU completions: %lu\n", @gpu_retires);
+    printf("Total atomic commits: %lu\n", @atomic_commits);
+    printf("Total plane updates: %lu\n", @plane_atomic_updates);
+    
+    printf("\n--- Memory Access ---\n");
+    printf("Total mmap operations: %lu\n", @mmap_operations);
+    printf("Total GEM faults: %lu\n", @gem_faults);
+    printf("Copy from user operations: %lu\n", @copy_from_user_ops);
+    printf("Copy to user operations: %lu\n", @copy_to_user_ops);
+    
+    printf("\n--- Timing Analysis ---\n");
+    printf("Frame time distribution:\n");
+    print(@frame_times);
+    
+    // Cleanup
+    clear(@object_write_count);
+    clear(@large_writes);
+    clear(@partial_writes);
+    clear(@frame_times);
+    clear(@last_vblank_time);
+}

@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/Module.symvers := sed 's/\.ko$$/\.o/' /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/modules.order | scripts/mod/modpost -m -a  -o /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/Module.symvers -e -i Module.symvers   -T -

@@ -1,0 +1,89 @@
+Attaching 6 probes...
+Starting VBlank tracing...
+Waiting for DRM events...
+Script PID: 141903
+Start time: 616094478034522 ns
+
+=== Heartbeat: 616095478529951 ===
+=== Frame Rate Analysis ===
+VBlank counts per CRTC:
+
+Last sequence numbers:
+
+
+=== Active Processes ===
+VBlank requests by process:
+
+VBlank deliveries by process:
+
+
+=== Heartbeat: 616096478402579 ===
+=== Frame Rate Analysis ===
+VBlank counts per CRTC:
+
+Last sequence numbers:
+
+
+=== Active Processes ===
+VBlank requests by process:
+
+VBlank deliveries by process:
+
+
+=== Heartbeat: 616097478468068 ===
+=== Frame Rate Analysis ===
+VBlank counts per CRTC:
+
+Last sequence numbers:
+
+
+=== Active Processes ===
+VBlank requests by process:
+
+VBlank deliveries by process:
+
+
+=== Heartbeat: 616098478378158 ===
+=== Frame Rate Analysis ===
+VBlank counts per CRTC:
+
+Last sequence numbers:
+
+
+=== Active Processes ===
+VBlank requests by process:
+
+VBlank deliveries by process:
+
+
+=== Heartbeat: 616099478531562 ===
+=== Frame Rate Analysis ===
+VBlank counts per CRTC:
+
+Last sequence numbers:
+
+
+=== Active Processes ===
+VBlank requests by process:
+
+VBlank deliveries by process:
+
+VBLANK_DELIVERED: pid=0 comm=swapper/0 file=0xffff92d48cf5e400 crtc=0 seq=7260077
+VBLANK_DELIVERED: pid=0 comm=swapper/0 file=0xffff92d48cf5e400 crtc=0 seq=7260077
+VBLANK_DELIVERED: pid=0 comm=swapper/0 file=0xffff92d48cf5e400 crtc=1 seq=7703084
+VBLANK_DELIVERED: pid=0 comm=swapper/0 file=0xffff92d48cf5e400 crtc=0 seq=7260078
+
+=== Final Statistics ===
+VBlank wait time distribution:
+
+
+Active CRTCs and last sequence numbers:
+
+@heartbeat_counter: 5
+
+
+
+
+
+
+

@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/drm_frame_blocker_minimal.mod := { echo  /home/carbon/Documents/WashU/bpf/ebpf/km_block/kernel_minimal.o;  echo; } > /home/carbon/Documents/WashU/bpf/ebpf/km_block/drm_frame_blocker_minimal.mod

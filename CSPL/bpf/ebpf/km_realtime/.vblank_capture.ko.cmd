@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_realtime/vblank_capture.ko := ld -r  -m elf_x86_64 -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/carbon/Documents/WashU/bpf/ebpf/km_realtime/vblank_capture.ko /home/carbon/Documents/WashU/bpf/ebpf/km_realtime/vblank_capture.o /home/carbon/Documents/WashU/bpf/ebpf/km_realtime/vblank_capture.mod.o;  true

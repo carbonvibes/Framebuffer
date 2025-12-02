@@ -1,0 +1,66 @@
+# Choose which module t# Install target
+install: all
+	sudo insmod real_overlay_test.ko
+
+# Uninstall target
+uninstall:
+	sudo rmmod real_overlay_test
+
+# Show module info
+info:
+	modinfo real_overlay_test.komment/uncomment as needed)
+obj-m += real_overlay_test.o
+# obj-m += simple_visual_test.o
+# obj-m += visual_overlay_test.o
+# obj-m += simple_overlay_test.o
+# obj-m += overlay_safety.o
+# obj-m += integration_example.o
+
+# Kernel build directory (adjust as needed)
+KDIR ?= /lib/modules/$(shell uname -r)/build
+
+# Build directory
+PWD := $(shell pwd)
+
+# Default target
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+# Clean target
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	rm -f *.o *.ko *.mod.c *.mod *.order *.symvers
+
+# Install target
+install: all
+	sudo insmod real_overlay_test.ko
+
+# Uninstall target
+uninstall:
+	sudo rmmod real_overlay_test
+
+# Show module info
+info:
+	modinfo simple_visual_test.ko
+
+# Show dmesg output
+dmesg:
+	dmesg | tail -20
+
+# Show proc output
+status:
+	cat /proc/simple_visual_test
+
+# Help target
+help:
+	@echo "Available targets:"
+	@echo "  all       - Build the kernel module"
+	@echo "  clean     - Clean build files"
+	@echo "  install   - Build and install the module"
+	@echo "  uninstall - Remove the module"
+	@echo "  info      - Show module information"
+	@echo "  dmesg     - Show recent kernel messages"
+	@echo "  status    - Show module status via proc interface"
+	@echo "  help      - Show this help message"
+
+.PHONY: all clean install uninstall info dmesg status help

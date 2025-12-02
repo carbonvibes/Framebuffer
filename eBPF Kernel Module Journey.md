@@ -1,3 +1,20 @@
+# Malicious Video Dataset Generation and eBPF Kernel Module Development Journey
+I completed the initial phase of generating a dataset of malicious videos designed specifically to evaluate platform responses to photosensitive epileptic content. After carefully studying the four primary guidelines for photosensitive epilepsy (Absolute Violation, Michelson Contrast Violation, Red Threshold, and Size & Flash Threshold), I utilized Python along with OpenCV to generate a total of 40 distinct videos:
+
+- 5 videos explicitly crafted to violate the Absolute Violation Condition,
+- 5 additional videos violating the Michelson Contrast Condition,
+- 30 videos addressing the Red Threshold Violation condition, structured into 6 different sets with 5 unique shapes per set.
+
+The remaining two guidelines (Size Threshold and Flash Threshold) were consistently violated across all videos. I successfully uploaded these videos across 14 platforms to check their content moderation capabilities. As of now, no platform has flagged any of the content.
+
+Then, I started working on seeing how eBPF could help us capture raw framebuffer data directly from the Linux kernel. I began by trying to understand several foundational concepts, including the Direct Rendering Manager (DRM), Graphics Execution Manager (GEM) objects, framebuffer (FB) objects, CRTC objects, planes, pixel formats, and the GPU rendering pipeline, along with related memory management structures and APIs exposed by the kernel.
+
+Then, using bpftrace I began placing kfunc probes on DRM functions such as drm_vblank_event. This allowed me to trace the queuing and delivery processes of vertical blanking intervals. After addressing numerous initial errors and debugging challenges, I successfully traced these kernel-level events. To verify the functionality rigorously, I calculated the screen refresh rate by counting the vblank events per second, which accurately matched the actual hardware refresh rate for each monitor. Additionally, I utilized the unique CRTC identifiers associated with my dual-monitor setup to distinctly trace processes running on each screen.
+
+Furthermore, I placed a kfunc probe on the drm_framebuffer_init function, and found that the BTF information exposed the struct drm_framebuffer *fb, which allowed me to effectively extract frame-specific information such as width, height, and stride length, validating these details against actual monitor specifications with complete accuracy. Currently, I’m taking a close look at all the related API structs exposed by this BTF function that could potentially be of use to us. For instance, I also found the struct drm_gem_object, which seems to contain memory pointers to the actual framebuffer data, and I’m currently trying to explore this and also working on tracing other related drm events. Also, I did something more, but it would be too boring and very long to explain everything.
+
+In parallel, I attempted using the Python wrapper provided by BCC tools to enhance the control and flexibility over eBPF scripts. However, my current version (v0.19.0) had several limitations, specifically the inability to support kfunc probes, restricting me to kprobes and uprobes only (I was breaking my head over this for a long period of time, and finally found the cause of this issue).
+
 # DRM Framebuffer Pixel Extractor:
 
 ## Project Overview
@@ -389,11 +406,19 @@ All critical sections are protected by mutexes to prevent race conditions in mul
 ## Steps to reproduce the project:
 1. **Clone the Repository**: Get the source code from my GitHub repository.
 2. **Build the Kernel Module**: Use the provided Makefile to compile the module against your kernel headers.
-3. **Load the Module**: Use `sudo insmod *.ko` to load the module into the kernel.
-4. **Check `/proc` Interfaces**: Verify that the `/proc/drm_fb_pixels` and `/proc/drm_fb_raw` interfaces are available.
-5. **Check dmesg Logs**: Use `dmesg` to view debug output and ensure the module is functioning correctly.
-6. **Use the Command** `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png` to capture the framebuffer data and convert it to an image.
-7. **Unload the Module**: Use `sudo rmmod <module_name>` to safely remove the module when done.
+3. **Disable Secure Boot**: Ensure that Secure Boot is disabled in your BIOS/UEFI settings, as it prevents loading unsigned kernel modules.
+4. **Download Kernel Headers**: Make sure you have the correct kernel headers installed for your running kernel version.
+   - On Debian/Ubuntu, you can install them using `sudo apt-get install linux-headers-$(uname -r)`.
+   - On Fedora/RHEL, use `sudo dnf install kernel-devel kernel-headers`.
+   - On Arch Linux, use `sudo pacman -S linux-headers`.
+   - On openSUSE, use `sudo zypper install kernel-devel kernel-headers`.
+5. **Make**: Run `make` in the module directory to compile the kernel module.
+6. **Load the Module**: Use `sudo insmod *.ko` to load the module into the kernel.
+7. **Check lsmod**: Verify that the module is loaded by running `lsmod | grep <module_name>`.
+8. **Check dmesg Logs**: Use `dmesg` to view debug output and ensure the module is functioning correctly.
+9. **Check `/proc` Interfaces**: Verify that the `/proc/drm_fb_pixels` and `/proc/drm_fb_raw` interfaces are available.
+10. **Use the Command** `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png` to capture the framebuffer data and convert it to an image.
+11. **Unload the Module**: Use `sudo rmmod <module_name>` to safely remove the module when done.
 
 ### Fixing the latency issue:
 I changed the way I tested the latency, initially I was using a shellscript that was running the commands `ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 output.png & python3 script.py` and then checking the time recorded by the stopwatch on the screenshots. But then I learned that running the shellscript and using `&` bash command introduces additional latency due to process scheduling and context switching. So, I changed to using the `parallel` command to run both commands in parallel without the `&` operator, which allows for better CPU core utilization and reduces the overhead of process management.
@@ -407,3 +432,6 @@ This is the command I used to run both commands in parallel:
 ``` 
 
 Doing this reduced the latency to around 60ms, which is significantly better than the initial 150ms.
+
+### Current Work:
+I think that blocking a frame once our detection algorithm flags it isn’t feasible in the current setup. We’re already about 60 ms thats roughly four frames behind what’s actually being scanned out. By the time we receive a frame for analysis, four newer frames are either on-screen or in the pipeline, so even if the detection algo takes sub-16 ms decision it still arrives too late to stop that frame (and several successors) from appearing. I think stopping a frame after it has already been queued for scan-out is almost impossible and needs to implemented in the driver level ig. A more practical strategy is to draw a cursor style overlay plane that masks the malicious frame content instead of trying to block the frame itself. I’m working on getting that overlay approach working. I'm currently also exploring the possibility of delaying the frame from getting scanned out on the subsequent vblank event.

@@ -1,0 +1,34 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * DRM Atomic Helper Commit Planes Tracer (Minimal Working Version)
+ */
+
+BEGIN {
+    printf("DRM Atomic Helper Commit Planes Tracer Started\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    @count = 0;
+}
+
+fentry:drm_kms_helper:drm_atomic_helper_commit_planes {
+    @count++;
+    printf("[%s] COMMIT_PLANES #%d: %s (PID: %d)\n",
+           strftime("%H:%M:%S", nsecs), @count, comm, pid);
+    printf("  Device: %p, State: %p, Flags: 0x%x\n",
+           args->dev, args->old_state, args->flags);
+    @entry_time[tid] = nsecs;
+}
+
+fexit:drm_kms_helper:drm_atomic_helper_commit_planes {
+    if (@entry_time[tid] > 0) {
+        $duration_us = (nsecs - @entry_time[tid]) / 1000;
+        printf("  Duration: %lu μs\n", $duration_us);
+        delete(@entry_time[tid]);
+    }
+}
+
+END {
+    printf("Total calls: %lu\n", @count);
+    clear(@count);
+    clear(@entry_time);
+}

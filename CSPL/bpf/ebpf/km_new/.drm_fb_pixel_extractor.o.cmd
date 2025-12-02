@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_new/drm_fb_pixel_extractor.o := ld  -m elf_x86_64 -z noexecstack     -r -o /home/carbon/Documents/WashU/bpf/ebpf/km_new/drm_fb_pixel_extractor.o /home/carbon/Documents/WashU/bpf/ebpf/km_new/kernel.o

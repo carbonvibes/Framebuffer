@@ -1,0 +1,24 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Intel i915 Atomic Commit Tail Tracer (Minimal Version)
+ */
+
+BEGIN {
+    printf("=== Intel i915 Atomic Commit Tail Tracer (Minimal) ===\n");
+    printf("Tracing intel_atomic_commit_tail...\n\n");
+    @count = 0;
+}
+
+fentry:i915:intel_atomic_commit_tail {
+    @count++;
+    $state = args->state;
+    
+    printf("[%s] intel_atomic_commit_tail #%d: %s (PID: %d) state=%p\n",
+           strftime("%H:%M:%S", nsecs), @count, comm, pid, $state);
+}
+
+END {
+    printf("Total intel_atomic_commit_tail calls: %lu\n", @count);
+    clear(@count);
+}

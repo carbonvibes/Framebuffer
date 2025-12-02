@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km/Module.symvers := sed 's/\.ko$$/\.o/' /home/carbon/Documents/WashU/bpf/ebpf/km/modules.order | scripts/mod/modpost -m -a  -o /home/carbon/Documents/WashU/bpf/ebpf/km/Module.symvers -e -i Module.symvers   -T -

@@ -1,0 +1,1 @@
+ffmpeg -f rawvideo -pixel_format bgr0 -video_size 3840x1080 -i /proc/drm_fb_raw -frames:v 1 framebuffer.png & /bin/python3 /home/carbon/Documents/WashU/bpf/ebpf/test/test2.py

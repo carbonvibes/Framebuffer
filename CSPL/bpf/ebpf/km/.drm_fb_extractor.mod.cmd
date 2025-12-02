@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.mod := { echo  /home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.o;  echo; } > /home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.mod

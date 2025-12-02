@@ -1,0 +1,289 @@
+#!/usr/bin/env bpftrace
+
+BEGIN {
+    printf("Starting Framebuffer Extraction with eBPF...\n");
+    printf("Tracing DRM and i915 events for framebuffer access...\n");
+    printf("Script PID: %d\n", pid);
+    printf("Start time: %lu ns\n", nsecs);
+    
+    // Initialize counters
+    @total_gem_objects = 0;
+    @total_plane_updates = 0;
+    @total_vblank_events = 0;
+}
+
+// Track GEM object creation (potential framebuffers)
+tracepoint:i915:i915_gem_object_create {
+    $size = args->size;
+    $obj = args->obj;
+    
+    printf("GEM_OBJECT_CREATE: obj=%p size=%lu bytes (%lu KB)\n", 
+           $obj, $size, $size/1024);
+    
+    // Store object info for correlation
+    @gem_objects[$obj] = $size;
+    @gem_create_time[$obj] = nsecs;
+    @total_gem_objects++;
+    
+    // Track large objects that might be framebuffers
+    if ($size > 1024*1024) { // > 1MB, likely framebuffer
+        printf("  -> POTENTIAL FRAMEBUFFER: Large object detected\n");
+        @potential_framebuffers[$obj] = $size;
+    }
+}
+
+// Track GEM object reads (accessing framebuffer data)
+tracepoint:i915:i915_gem_object_pread {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    printf("GEM_OBJECT_PREAD: obj=%p offset=%lu size=%lu\n", 
+           $obj, $offset, $size);
+    
+    // Check if this is a potential framebuffer
+    if (@potential_framebuffers[$obj] != 0) {
+        printf("  -> FRAMEBUFFER READ: Reading from potential FB object\n");
+        printf("  -> FB_SIZE: %lu bytes, READ_OFFSET: %lu, READ_SIZE: %lu\n",
+               @potential_framebuffers[$obj], $offset, $size);
+        @framebuffer_reads[$obj]++;
+    }
+    
+    @total_reads++;
+}
+
+// Track GEM object writes (updating framebuffer data)
+tracepoint:i915:i915_gem_object_pwrite {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    printf("GEM_OBJECT_PWRITE: obj=%p offset=%lu size=%lu\n", 
+           $obj, $offset, $size);
+    
+    // Check if this is a potential framebuffer
+    if (@potential_framebuffers[$obj] != 0) {
+        printf("  -> FRAMEBUFFER WRITE: Writing to potential FB object\n");
+        printf("  -> FB_SIZE: %lu bytes, WRITE_OFFSET: %lu, WRITE_SIZE: %lu\n",
+               @potential_framebuffers[$obj], $offset, $size);
+        @framebuffer_writes[$obj]++;
+        
+        // Extract pixel data information
+        $pixels_written = $size / 4; // Assuming 32-bit pixels (RGBA)
+        printf("  -> ESTIMATED_PIXELS: %lu pixels modified\n", $pixels_written);
+    }
+    
+    @total_writes++;
+}
+
+// Track plane updates (when framebuffers are displayed)
+tracepoint:i915:intel_update_plane {
+    $plane = args->plane;
+    $crtc = args->crtc;
+    
+    printf("PLANE_UPDATE: plane=%p crtc=%p\n", $plane, $crtc);
+    @plane_updates[$crtc]++;
+    @total_plane_updates++;
+}
+
+// Track plane disable events
+tracepoint:i915:intel_disable_plane {
+    $plane = args->plane;
+    $crtc = args->crtc;
+    
+    printf("PLANE_DISABLE: plane=%p crtc=%p\n", $plane, $crtc);
+    @plane_disables[$crtc]++;
+}
+
+// Track VBlank events (frame boundaries)
+tracepoint:drm:drm_vblank_event {
+    $crtc = args->crtc;
+    $seq = args->seq;
+    
+    printf("VBLANK_EVENT: crtc=%d seq=%u - FRAME BOUNDARY\n", $crtc, $seq);
+    
+    @vblank_count[$crtc]++;
+    @total_vblank_events++;
+    @frame_timestamps[$crtc] = nsecs;
+}
+
+// Track when applications request VBlank notifications
+tracepoint:drm:drm_vblank_event_queued {
+    $pid = pid;
+    $comm = comm;
+    $crtc = args->crtc;
+    $seq = args->seq;
+    
+    printf("VBLANK_QUEUED: pid=%d comm=%s crtc=%d seq=%u\n", 
+           $pid, $comm, $crtc, $seq);
+    
+    @app_vblank_requests[$comm]++;
+}
+
+// Track GEM object destruction
+tracepoint:i915:i915_gem_object_destroy {
+    $obj = args->obj;
+    
+    printf("GEM_OBJECT_DESTROY: obj=%p\n", $obj);
+    
+    // Check if this was a potential framebuffer
+    if (@potential_framebuffers[$obj] != 0) {
+        printf("  -> FRAMEBUFFER DESTROYED: size=%lu bytes\n", 
+               @potential_framebuffers[$obj]);
+        printf("  -> LIFETIME_READS: %lu, LIFETIME_WRITES: %lu\n",
+               @framebuffer_reads[$obj], @framebuffer_writes[$obj]);
+        
+        delete(@potential_framebuffers[$obj]);
+        delete(@framebuffer_reads[$obj]);
+        delete(@framebuffer_writes[$obj]);
+    }
+    
+    delete(@gem_objects[$obj]);
+    delete(@gem_create_time[$obj]);
+}
+
+// Memory fault events (when GPU accesses framebuffer memory)
+tracepoint:i915:i915_gem_object_fault {
+    $obj = args->obj;
+    $offset = args->offset;
+    
+    printf("GEM_OBJECT_FAULT: obj=%p offset=%lu\n", $obj, $offset);
+    
+    if (@potential_framebuffers[$obj] != 0) {
+        printf("  -> FRAMEBUFFER FAULT: GPU accessing FB at offset %lu\n", $offset);
+        @framebuffer_faults[$obj]++;
+    }
+}
+
+// Framebuffer compression events
+tracepoint:i915:intel_fbc_activate {
+    printf("FBC_ACTIVATE: Framebuffer compression activated\n");
+    @fbc_activations++;
+}
+
+tracepoint:i915:intel_fbc_deactivate {
+    printf("FBC_DEACTIVATE: Framebuffer compression deactivated\n");
+    @fbc_deactivations++;
+}
+
+// Periodic summary every 5 seconds
+interval:s:5 {
+    $now = nsecs;
+    printf("\n=== FRAMEBUFFER ANALYSIS SUMMARY ===\n");
+    printf("Time: %lu ns\n", $now);
+    
+    printf("\n--- GEM Objects (Potential Framebuffers) ---\n");
+    printf("Total GEM objects created: %lu\n", @total_gem_objects);
+    printf("Active potential framebuffers:\n");
+    print(@potential_framebuffers);
+    
+    printf("\n--- Framebuffer Activity ---\n");
+    printf("FB reads per object:\n");
+    print(@framebuffer_reads);
+    printf("FB writes per object:\n");
+    print(@framebuffer_writes);
+    printf("FB faults per object:\n");
+    print(@framebuffer_faults);
+    
+    printf("\n--- Display Activity ---\n");
+    printf("Total plane updates: %lu\n", @total_plane_updates);
+    printf("Plane updates per CRTC:\n");
+    print(@plane_updates);
+    printf("VBlank events per CRTC:\n");
+    print(@vblank_count);
+    
+    printf("\n--- Application Activity ---\n");
+    printf("VBlank requests by application:\n");
+    print(@app_vblank_requests);
+    
+    printf("\n--- Compression Stats ---\n");
+    printf("FBC activations: %lu, deactivations: %lu\n", 
+           @fbc_activations, @fbc_deactivations);
+    
+    printf("==========================================\n\n");
+}
+
+// Hook into kernel memory allocation for even deeper framebuffer tracking
+kprobe:__kmalloc {
+    $size = arg0;
+    $ret = retval;
+    
+    // Only track large allocations that might be framebuffers
+    if ($size > 1024*1024) { // > 1MB
+        @large_kernel_allocs[$ret] = $size;
+        printf("LARGE_KMALLOC: ptr=%p size=%lu bytes (potential FB)\n", $ret, $size);
+    }
+}
+
+kprobe:kfree {
+    $ptr = arg0;
+    
+    if (@large_kernel_allocs[$ptr] != 0) {
+        printf("LARGE_KFREE: ptr=%p size=%lu bytes\n", $ptr, @large_kernel_allocs[$ptr]);
+        delete(@large_kernel_allocs[$ptr]);
+    }
+}
+
+// Try to hook into DRM framebuffer operations (if available)
+kprobe:drm_framebuffer_init {
+    $fb = arg0;
+    printf("DRM_FB_INIT: framebuffer=%p\n", $fb);
+    @drm_framebuffers[$fb] = nsecs;
+}
+
+kprobe:drm_framebuffer_cleanup {
+    $fb = arg0;
+    printf("DRM_FB_CLEANUP: framebuffer=%p\n", $fb);
+    if (@drm_framebuffers[$fb] != 0) {
+        $lifetime = nsecs - @drm_framebuffers[$fb];
+        printf("  -> FB_LIFETIME: %lu ns (%lu ms)\n", $lifetime, $lifetime/1000000);
+        delete(@drm_framebuffers[$fb]);
+    }
+}
+
+END {
+    printf("\n=== FINAL FRAMEBUFFER EXTRACTION REPORT ===\n");
+    
+    printf("\n--- Summary Statistics ---\n");
+    printf("Total GEM objects created: %lu\n", @total_gem_objects);
+    printf("Total plane updates: %lu\n", @total_plane_updates);
+    printf("Total VBlank events: %lu\n", @total_vblank_events);
+    printf("Total memory reads: %lu\n", @total_reads);
+    printf("Total memory writes: %lu\n", @total_writes);
+    
+    printf("\n--- Active Framebuffers ---\n");
+    print(@potential_framebuffers);
+    
+    printf("\n--- Framebuffer Access Patterns ---\n");
+    printf("Reads per framebuffer:\n");
+    print(@framebuffer_reads);
+    printf("Writes per framebuffer:\n");
+    print(@framebuffer_writes);
+    printf("Faults per framebuffer:\n");
+    print(@framebuffer_faults);
+    
+    printf("\n--- Display Timing ---\n");
+    printf("VBlank counts per CRTC:\n");
+    print(@vblank_count);
+    printf("Plane updates per CRTC:\n");
+    print(@plane_updates);
+    
+    printf("\n--- Application Usage ---\n");
+    printf("VBlank requests by application:\n");
+    print(@app_vblank_requests);
+    
+    // Cleanup
+    clear(@gem_objects);
+    clear(@gem_create_time);
+    clear(@potential_framebuffers);
+    clear(@framebuffer_reads);
+    clear(@framebuffer_writes);
+    clear(@framebuffer_faults);
+    clear(@plane_updates);
+    clear(@plane_disables);
+    clear(@vblank_count);
+    clear(@frame_timestamps);
+    clear(@app_vblank_requests);
+    clear(@large_kernel_allocs);
+    clear(@drm_framebuffers);
+}

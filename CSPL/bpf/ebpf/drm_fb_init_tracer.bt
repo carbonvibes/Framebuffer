@@ -1,0 +1,53 @@
+fentry:drm:drm_framebuffer_init /comm != "code"/
+{
+    // arg0: struct drm_device *dev
+    // arg1: struct drm_framebuffer *fb
+    // arg2: const struct drm_framebuffer_funcs *funcs
+
+    $dev = (struct drm_device *)args->dev;
+    $fb = (struct drm_framebuffer *)args->fb;
+    $funcs = (void *)args->funcs; // Cast to void* for printing address
+
+    printf("--------------------------------------------------\n");
+    printf("Probe on fentry: fentry:drm:drm_framebuffer_init\n");
+    printf("Timestamp: %lld ns, Comm: %s, PID: %d\n", nsecs, comm, pid);
+
+    printf("  Device Ptr (dev): %p\n", $dev);
+    printf("  Framebuffer Ptr (fb): %p\n", $fb);
+    printf("  Framebuffer Funcs Ptr (funcs): %p\n", $funcs);
+    printf("   Device Name : %d\n", $dev->num_crtcs);
+   // printf("  Function Address: %d\n", $fb->fd);
+
+    if ($fb == 0) {
+        printf("  Error: Framebuffer pointer (fb) is NULL.\n");
+        printf("--------------------------------------------------\n");
+        return;
+    }
+
+    printf("  Framebuffer Details (fb):\n");
+    printf("    Width: %u\n", $fb->width);
+    printf("    Height: %u\n", $fb->height);
+
+    // Accessing fb->format, which is 'const struct drm_format_info *format'
+    $format_info = $fb->format;
+    if ($format_info == 0) {
+        printf("    Error: Framebuffer format_info pointer is NULL.\n");
+    } else {
+        $pixel_format_val = $format_info->format; // This is the u32 FourCC code
+        // Print FourCC as characters if printable, and hex value
+        printf("    Pixel Format (FourCC): %c%c%c%c (0x%08x)\n",
+               ($pixel_format_val & 0xFF),
+               (($pixel_format_val >> 8) & 0xFF),
+               (($pixel_format_val >> 16) & 0xFF),
+               (($pixel_format_val >> 24) & 0xFF),
+               $pixel_format_val);
+        // Could not access cpp[0] due to bpftrace/BTF limitations, so skip this field for now
+        printf("    Number of Planes: %u\n", $format_info->num_planes);
+    }
+
+    printf("    Pitch/Stride (Plane 0): %u bytes\n", $fb->pitches[0]); // pitches is unsigned int array
+    // printf("    Modifier (Plane 0): 0x%llx\n", $fb->modifier[0]); // modifier is uint64_t array, uncomment if needed
+    printf("    Flags: 0x%x\n", $fb->flags); // flags is int
+
+    printf("--------------------------------------------------\n");
+}

@@ -1,0 +1,158 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Intel i915 Atomic Commit Tail Tracer
+ * 
+ * This script traces the intel_atomic_commit_tail function
+ * and provides verbose output about the Intel atomic state
+ * 
+ * Function signature:
+ * void intel_atomic_commit_tail(struct intel_atomic_state *state)
+ */
+
+BEGIN {
+    printf("=== Intel i915 Atomic Commit Tail Tracer ===\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    printf("Tracing: fentry:i915:intel_atomic_commit_tail\n");
+    printf("PID: %d\n", pid);
+    printf("==========================================\n\n");
+    
+    @trace_count = 0;
+    @start_time = nsecs;
+}
+
+fentry:i915:intel_atomic_commit_tail {
+    @trace_count++;
+    $state = args->state;
+    
+    printf("┌─ TRACE #%d ─────────────────────────────────────────────────────\n", @trace_count);
+    printf("│ [%s] intel_atomic_commit_tail() ENTRY\n", strftime("%H:%M:%S.%f", nsecs));
+    printf("│ Process: %s (PID: %d, TID: %d)\n", comm, pid, tid);
+    printf("│ CPU: %d\n", cpu);
+    printf("│\n");
+    
+    // Intel Atomic State Information
+    printf("│ ┌─ Intel Atomic State (struct intel_atomic_state *) ─────────\n");
+    printf("│ │ Address: %p\n", $state);
+    
+    if ($state != 0) {
+        // Access the base DRM atomic state
+        $base_state = &$state->base;
+        printf("│ │ Base DRM State: %p\n", $base_state);
+        
+        if ($base_state != 0) {
+            $dev = $base_state->dev;
+            printf("│ │ Device: %p\n", $dev);
+            printf("│ │ Allow Modeset: %s\n", $base_state->allow_modeset ? "true" : "false");
+            printf("│ │ Legacy Cursor Update: %s\n", $base_state->legacy_cursor_update ? "true" : "false");
+            printf("│ │ Async Update: %s\n", $base_state->async_update ? "true" : "false");
+            printf("│ │ Duplicated: %s\n", $base_state->duplicated ? "true" : "false");
+            
+            // DRM Device Information
+            if ($dev != 0) {
+                printf("│ │\n");
+                printf("│ │ ┌─ DRM Device Details ──────────────────────────\n");
+                printf("│ │ │ Primary Node: %p\n", $dev->primary);
+                printf("│ │ │ Render Node: %p\n", $dev->render);
+                printf("│ │ │ Driver: %p\n", $dev->driver);
+                
+                // Try to access driver name if available
+                if ($dev->driver != 0) {
+                    printf("│ │ │ Driver Name: %s\n", str($dev->driver->name));
+                }
+                
+                // Device flags and state
+                printf("│ │ │ Open Count: %d\n", $dev->open_count);
+                
+                // Mode configuration
+                printf("│ │ │ Mode Config: %p\n", &$dev->mode_config);
+                printf("│ │ │ ├─ Num Connector: %d\n", $dev->mode_config.num_connector);
+                printf("│ │ │ ├─ Num Encoder: %d\n", $dev->mode_config.num_encoder);
+                printf("│ │ │ ├─ Num Crtc: %d\n", $dev->mode_config.num_crtc);
+                printf("│ │ │ └─ Num Plane: %d\n", $dev->mode_config.num_total_plane);
+                printf("│ │ └───────────────────────────────────────────────\n");
+            }
+            
+            // Plane states
+            printf("│ │ Planes: %p\n", $base_state->planes);
+            if ($base_state->planes != 0) {
+                printf("│ │ ├─ Plane States Available\n");
+            }
+            
+            // CRTC states
+            printf("│ │ CRTCs: %p\n", $base_state->crtcs);
+            if ($base_state->crtcs != 0) {
+                printf("│ │ ├─ CRTC States Available\n");
+            }
+            
+            // Connector states
+            printf("│ │ Connectors: %p\n", $base_state->connectors);
+            if ($base_state->connectors != 0) {
+                printf("│ │ └─ Connector States Available\n");
+            }
+        }
+    } else {
+        printf("│ │ ERROR: NULL Intel atomic state pointer!\n");
+    }
+    printf("│ └─────────────────────────────────────────────────────────────\n");
+    printf("│\n");
+    
+    // Store entry time for duration calculation
+    @entry_time[tid] = nsecs;
+}
+
+fexit:i915:intel_atomic_commit_tail {
+    $duration_ns = nsecs - @entry_time[tid];
+    $duration_us = $duration_ns / 1000;
+    
+    printf("│ [%s] intel_atomic_commit_tail() EXIT\n", strftime("%H:%M:%S.%f", nsecs));
+    printf("│ Duration: %lu ns (%lu μs)\n", $duration_ns, $duration_us);
+    printf("└─────────────────────────────────────────────────────────────────\n\n");
+    
+    // Update statistics
+    @total_duration_ns += $duration_ns;
+    @min_duration_ns = @min_duration_ns == 0 ? $duration_ns : 
+                       ($duration_ns < @min_duration_ns ? $duration_ns : @min_duration_ns);
+    @max_duration_ns = $duration_ns > @max_duration_ns ? $duration_ns : @max_duration_ns;
+    
+    // Clean up
+    delete(@entry_time[tid]);
+}
+
+// Optional: Track related Intel i915 operations for context
+fentry:i915:intel_atomic_commit {
+    printf(">>> Related: intel_atomic_commit() called by %s (PID: %d)\n", comm, pid);
+}
+
+fentry:i915:intel_commit_modeset_disables {
+    printf(">>> Related: intel_commit_modeset_disables() called by %s (PID: %d)\n", comm, pid);
+}
+
+fentry:i915:intel_commit_modeset_enables {
+    printf(">>> Related: intel_commit_modeset_enables() called by %s (PID: %d)\n", comm, pid);
+}
+
+// Handle Ctrl+C gracefully
+END {
+    printf("\n=== Intel i915 Atomic Commit Tail Tracer Statistics ===\n");
+    printf("Script runtime: %lu seconds\n", (nsecs - @start_time) / 1000000000);
+    printf("Total traces: %lu\n", @trace_count);
+    
+    if (@trace_count > 0) {
+        printf("Average duration: %lu ns (%lu μs)\n", 
+               @total_duration_ns / @trace_count,
+               (@total_duration_ns / @trace_count) / 1000);
+        printf("Min duration: %lu ns (%lu μs)\n", @min_duration_ns, @min_duration_ns / 1000);
+        printf("Max duration: %lu ns (%lu μs)\n", @max_duration_ns, @max_duration_ns / 1000);
+    }
+    
+    printf("=========================================================\n");
+    
+    // Clean up all maps
+    clear(@trace_count);
+    clear(@start_time);
+    clear(@entry_time);
+    clear(@total_duration_ns);
+    clear(@min_duration_ns);
+    clear(@max_duration_ns);
+}

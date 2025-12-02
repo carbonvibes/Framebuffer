@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method3_input_block/modules.order := {   echo /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method3_input_block/input_blocker.ko; :; } | awk '!x[$$0]++' - > /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method3_input_block/modules.order

@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/modules.order := {   echo /home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/drm_fb_pixel_extractor.ko; :; } | awk '!x[$$0]++' - > /home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/modules.order

@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/drm_frame_blocker_minimal.o := ld  -m elf_x86_64 -z noexecstack     -r -o /home/carbon/Documents/WashU/bpf/ebpf/km_block/drm_frame_blocker_minimal.o /home/carbon/Documents/WashU/bpf/ebpf/km_block/kernel_minimal.o

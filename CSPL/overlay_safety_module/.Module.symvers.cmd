@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/overlay_safety_module/Module.symvers := sed 's/\.ko$$/\.o/' /home/carbon/Documents/WashU/overlay_safety_module/modules.order | scripts/mod/modpost -m -a  -o /home/carbon/Documents/WashU/overlay_safety_module/Module.symvers -e -i Module.symvers   -T -

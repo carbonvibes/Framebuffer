@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km3/drm_fb_pixel_extractor_v3.ko := ld -r  -m elf_x86_64 -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/carbon/Documents/WashU/bpf/ebpf/km3/drm_fb_pixel_extractor_v3.ko /home/carbon/Documents/WashU/bpf/ebpf/km3/drm_fb_pixel_extractor_v3.o /home/carbon/Documents/WashU/bpf/ebpf/km3/drm_fb_pixel_extractor_v3.mod.o;  true
