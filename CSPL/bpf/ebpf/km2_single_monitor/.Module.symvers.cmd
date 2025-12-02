@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/Module.symvers := sed 's/\.ko$$/\.o/' /home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/modules.order | scripts/mod/modpost -m -a  -o /home/carbon/Documents/WashU/bpf/ebpf/km2_single_monitor/Module.symvers -e -i Module.symvers   -T -

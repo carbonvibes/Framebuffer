@@ -1,0 +1,66 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Intel i915 Atomic Commit Tail Tracer (Simple Version)
+ * 
+ * This script provides a simplified trace of intel_atomic_commit_tail
+ * with key information about the Intel atomic state
+ */
+
+BEGIN {
+    printf("=== Intel i915 Atomic Commit Tail Tracer (Simple) ===\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    printf("Tracing: intel_atomic_commit_tail\n\n");
+    @count = 0;
+}
+
+fentry:i915:intel_atomic_commit_tail {
+    @count++;
+    $state = args->state;
+    
+    printf("[%s] INTEL_ATOMIC_COMMIT_TAIL #%d: %s (PID: %d)\n",
+           strftime("%H:%M:%S", nsecs), @count, comm, pid);
+    printf("  Intel Atomic State: %p", $state);
+    
+    if ($state != 0) {
+        // Access the base drm_atomic_state through the intel_atomic_state
+        $base_state = $state->base;
+        if ($base_state != 0) {
+            printf(" (Base State: %p)", $base_state);
+            $dev = $base_state->dev;
+            if ($dev != 0 && $dev->driver != 0) {
+                printf(" (Driver: %s)", str($dev->driver->name));
+            }
+            if ($base_state->allow_modeset || $base_state->async_update) {
+                printf(" (Modeset: %s, Async: %s)",
+                       $base_state->allow_modeset ? "Y" : "N",
+                       $base_state->async_update ? "Y" : "N");
+            }
+        }
+    }
+    printf("\n");
+    
+    if ($state != 0 && $state->base != 0 && $state->base->dev != 0) {
+        $dev = $state->base->dev;
+        printf("  Planes: %d, CRTCs: %d, Connectors: %d, Encoders: %d\n",
+               $dev->mode_config.num_total_plane,
+               $dev->mode_config.num_crtc,
+               $dev->mode_config.num_connector,
+               $dev->mode_config.num_encoder);
+    }
+    printf("\n");
+    
+    @entry_time[tid] = nsecs;
+}
+
+fexit:i915:intel_atomic_commit_tail {
+    $duration_us = (nsecs - @entry_time[tid]) / 1000;
+    printf("  → Completed in %lu μs\n\n", $duration_us);
+    delete(@entry_time[tid]);
+}
+
+END {
+    printf("Total intel_atomic_commit_tail calls: %lu\n", @count);
+    clear(@count);
+    clear(@entry_time);
+}

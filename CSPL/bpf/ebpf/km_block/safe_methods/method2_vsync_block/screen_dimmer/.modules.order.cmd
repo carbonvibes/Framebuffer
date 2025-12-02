@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/screen_dimmer/modules.order := {   echo /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/screen_dimmer/screen_dimmer_simple.ko; :; } | awk '!x[$$0]++' - > /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method2_vsync_block/screen_dimmer/modules.order

@@ -1,0 +1,32 @@
+obj-m := simple_intel_capture.o
+
+KERNEL_DIR := /lib/modules/$(shell uname -r)/build
+PWD := $(shell pwd)
+
+all:
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules
+
+clean:
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
+
+install: all
+	sudo insmod simple_intel_capture.ko
+
+uninstall:
+	sudo rmmod simple_intel_capture || true
+
+reload: uninstall install
+
+test:
+	@echo "Testing simple Intel capture..."
+	@sudo cat /proc/intel_fb_capture || echo "Module not loaded"
+
+monitor:
+	@echo "Monitoring Intel atomic commits..."
+	@while true; do \
+		echo "=== $$(date) ==="; \
+		sudo cat /proc/intel_fb_capture | head -10; \
+		sleep 3; \
+	done
+
+.PHONY: all clean install uninstall reload test monitor

@@ -1,0 +1,84 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Simplified Framebuffer Tracer focusing on core operations
+ */
+
+BEGIN {
+    printf("=== Simple Framebuffer Tracer Started ===\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    printf("Monitoring framebuffer operations...\n\n");
+    @count = 0;
+}
+
+// Core framebuffer lifecycle
+fentry:drm:drm_framebuffer_init {
+    @count++;
+    printf("[%s] FB_INIT: dev=%p fb=%p\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->fb);
+}
+
+fentry:drm:drm_framebuffer_cleanup {
+    @count++;
+    printf("[%s] FB_CLEANUP: fb=%p\n",
+           strftime("%H:%M:%S", nsecs), args->fb);
+}
+
+// IOCTL operations (most common)
+fentry:drm:drm_mode_addfb_ioctl {
+    @count++;
+    printf("[%s] ADDFB_IOCTL: dev=%p file=%p pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->file_priv, pid, comm);
+}
+
+fentry:drm:drm_mode_addfb2_ioctl {
+    @count++;
+    printf("[%s] ADDFB2_IOCTL: dev=%p file=%p pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->file_priv, pid, comm);
+}
+
+fentry:drm:drm_mode_rmfb_ioctl {
+    @count++;
+    printf("[%s] RMFB_IOCTL: dev=%p file=%p pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->file_priv, pid, comm);
+}
+
+// Display operations
+fentry:drm:drm_mode_setcrtc {
+    @count++;
+    printf("[%s] SETCRTC: dev=%p file=%p pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->file_priv, pid, comm);
+}
+
+fentry:drm:drm_mode_setplane {
+    @count++;
+    printf("[%s] SETPLANE: dev=%p file=%p pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), args->dev, args->file_priv, pid, comm);
+}
+
+// Atomic operations
+fentry:drm:drm_atomic_commit {
+    @count++;
+    printf("[%s] ATOMIC_COMMIT: state=%p\n",
+           strftime("%H:%M:%S", nsecs), args->state);
+}
+
+// VBlank (frame timing)
+fentry:drm:drm_vblank_count {
+    @count++;
+    printf("[%s] VBLANK_COUNT: dev=%p\n",
+           strftime("%H:%M:%S", nsecs), args->dev);
+}
+
+// Status updates every 5 seconds
+interval:s:5 {
+    printf("\n[%s] Status: %d events captured\n", 
+           strftime("%H:%M:%S", nsecs), @count);
+}
+
+END {
+    printf("\n=== Tracer Summary ===\n");
+    printf("Total events captured: %d\n", @count);
+    printf("Session ended: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    clear(@count);
+}

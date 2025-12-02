@@ -1,0 +1,1 @@
+./detile 3840 1080 15360 X /proc/drm_fb_raw linear.raw & /bin/python3 /home/carbon/Documents/WashU/bpf/ebpf/test/test2.py

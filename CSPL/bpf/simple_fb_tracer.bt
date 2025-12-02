@@ -1,0 +1,51 @@
+#!/usr/bin/env bpftrace
+
+BEGIN {
+    printf("Simple Framebuffer Tracer\n");
+    printf("Monitoring DRM events for framebuffer activity...\n");
+    printf("Start time: %lu ns\n", nsecs);
+}
+
+// Track basic VBlank events (frame boundaries)
+tracepoint:drm:drm_vblank_event {
+    printf("VBLANK: crtc=%d seq=%u time=%lld\n", 
+           args->crtc, args->seq, (int64)args->time);
+    @vblank_count[args->crtc]++;
+}
+
+// Track VBlank requests from applications
+tracepoint:drm:drm_vblank_event_queued {
+    printf("VBLANK_QUEUED: pid=%d comm=%s crtc=%d seq=%u\n", 
+           pid, comm, args->crtc, args->seq);
+    @app_requests[comm]++;
+}
+
+// Track VBlank delivery to applications
+tracepoint:drm:drm_vblank_event_delivered {
+    printf("VBLANK_DELIVERED: pid=%d comm=%s crtc=%d seq=%u\n", 
+           pid, comm, args->crtc, args->seq);
+    @app_deliveries[comm]++;
+}
+
+// Periodic summary
+interval:s:5 {
+    printf("\n=== ACTIVITY SUMMARY ===\n");
+    printf("VBlank events per CRTC:\n");
+    print(@vblank_count);
+    printf("App VBlank requests:\n");
+    print(@app_requests);
+    printf("App VBlank deliveries:\n");
+    print(@app_deliveries);
+    printf("========================\n\n");
+    
+    clear(@vblank_count);
+    clear(@app_requests);
+    clear(@app_deliveries);
+}
+
+END {
+    printf("\nFramebuffer tracing completed.\n");
+    clear(@vblank_count);
+    clear(@app_requests);
+    clear(@app_deliveries);
+}

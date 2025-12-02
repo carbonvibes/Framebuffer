@@ -1,0 +1,94 @@
+#!/usr/bin/env bpftrace
+
+BEGIN {
+    printf("Starting VBlank tracing...\n");
+    printf("Waiting for DRM events...\n");
+    printf("Script PID: %d\n", pid);
+    printf("Start time: %lu ns\n", nsecs);
+}
+
+// Track vblank events and their relationships
+tracepoint:drm:drm_vblank_event {
+    printf("VBLANK_EVENT: crtc=%d seq=%u time=%lld high_prec=%d\n", 
+           args->crtc, args->seq, (int64)args->time, args->high_prec);
+    
+    // Store timing info per CRTC
+    @vblank_time[args->crtc] = nsecs;
+    @vblank_seq[args->crtc] = args->seq;
+    @vblank_count[args->crtc]++;
+}
+
+tracepoint:drm:drm_vblank_event_queued {
+    $pid = pid;
+    $comm = comm;
+    
+    printf("VBLANK_QUEUED: pid=%d comm=%s file=%p crtc=%d seq=%u\n", 
+           $pid, $comm, args->file, args->crtc, args->seq);
+    
+    // Track which processes are waiting for vblank
+    @waiting_procs[args->crtc, $pid] = nsecs;
+    @proc_vblank_requests[$comm]++;
+}
+
+tracepoint:drm:drm_vblank_event_delivered {
+    $pid = pid;
+    $comm = comm;
+    $now = nsecs;
+    
+    printf("VBLANK_DELIVERED: pid=%d comm=%s file=%p crtc=%d seq=%u\n", 
+           $pid, $comm, args->file, args->crtc, args->seq);
+    
+    // Calculate wait time if we have queued timestamp
+    if (@waiting_procs[args->crtc, $pid] != 0) {
+        $wait_time = $now - @waiting_procs[args->crtc, $pid];
+        $wait_time_ms = $wait_time / 1000000;
+        printf("  -> Wait time: %lu ns (%lu ms)\n", $wait_time, $wait_time_ms);
+        @vblank_wait_times = hist($wait_time);
+        delete(@waiting_procs[args->crtc, $pid]);
+    }
+    
+    @proc_vblank_delivered[$comm]++;
+}
+
+// Add a fallback to show we're running even without DRM events
+interval:s:1 {
+    printf("\n=== Heartbeat: %lu ===\n", nsecs);
+    
+    // Track if we have any data by using a counter
+    @heartbeat_counter++;
+    
+    printf("=== Frame Rate Analysis ===\n");
+    printf("VBlank counts per CRTC:\n");
+    print(@vblank_count);
+    printf("Last sequence numbers:\n");
+    print(@vblank_seq);
+    
+    printf("\n=== Active Processes ===\n");
+    printf("VBlank requests by process:\n");
+    print(@proc_vblank_requests);
+    printf("VBlank deliveries by process:\n");
+    print(@proc_vblank_delivered);
+    
+    // Reset counters
+    clear(@vblank_count);
+    clear(@proc_vblank_requests);
+    clear(@proc_vblank_delivered);
+}
+
+END {
+    printf("\n=== Final Statistics ===\n");
+    printf("VBlank wait time distribution:\n");
+    print(@vblank_wait_times);
+    
+    printf("\nActive CRTCs and last sequence numbers:\n");
+    print(@vblank_seq);
+    
+    // Cleanup
+    clear(@vblank_time);
+    clear(@vblank_seq);
+    clear(@vblank_count);
+    clear(@waiting_procs);
+    clear(@proc_vblank_requests);
+    clear(@proc_vblank_delivered);
+    clear(@vblank_wait_times);
+}

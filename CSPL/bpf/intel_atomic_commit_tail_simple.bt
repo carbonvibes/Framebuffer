@@ -1,0 +1,39 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Intel i915 Atomic Commit Tail Tracer (Simple Version)
+ * 
+ * This script provides a simplified trace of intel_atomic_commit_tail
+ * with key information about the Intel atomic state
+ */
+
+BEGIN {
+    printf("=== Intel i915 Atomic Commit Tail Tracer (Simple) ===\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    printf("Tracing: intel_atomic_commit_tail\n\n");
+    @count = 0;
+}
+
+fentry:i915:intel_atomic_commit_tail {
+    @count++;
+    $state = args->state;
+    
+    printf("[%s] INTEL_ATOMIC_COMMIT_TAIL #%d: %s (PID: %d)\n",
+           strftime("%H:%M:%S", nsecs), @count, comm, pid);
+    printf("  Intel Atomic State: %p\n", $state);
+    
+    // Simple access without complex struct dereferencing for now
+    @entry_time[tid] = nsecs;
+}
+
+fexit:i915:intel_atomic_commit_tail {
+    $duration_us = (nsecs - @entry_time[tid]) / 1000;
+    printf("  → Completed in %lu μs\n\n", $duration_us);
+    delete(@entry_time[tid]);
+}
+
+END {
+    printf("Total intel_atomic_commit_tail calls: %lu\n", @count);
+    clear(@count);
+    clear(@entry_time);
+}

@@ -1,0 +1,95 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * DRM Atomic Helper Commit Planes Tracer (Working Version)
+ * 
+ * Simplified but functional tracer for drm_atomic_helper_commit_planes
+ */
+
+BEGIN {
+    printf("=== DRM Atomic Helper Commit Planes Tracer ===\n");
+    printf("Time: %s\n", strftime("%Y-%m-%d %H:%M:%S", nsecs));
+    printf("Tracing: fentry:drm_kms_helper:drm_atomic_helper_commit_planes\n");
+    printf("=========================================================\n\n");
+    
+    @trace_count = 0;
+    @start_time = nsecs;
+}
+
+fentry:drm_kms_helper:drm_atomic_helper_commit_planes {
+    @trace_count++;
+    $dev = args->dev;
+    $old_state = args->old_state;
+    $flags = args->flags;
+    
+    printf("┌─ TRACE #%d ─────────────────────────────────────────────────────\n", @trace_count);
+    printf("│ [%s] drm_atomic_helper_commit_planes() ENTRY\n", strftime("%H:%M:%S.%f", nsecs));
+    printf("│ Process: %s (PID: %d, TID: %d, CPU: %d)\n", comm, pid, tid, cpu);
+    printf("│\n");
+    printf("│ Parameters:\n");
+    printf("│ ├─ Device (struct drm_device *): %p\n", $dev);
+    printf("│ ├─ Old State (struct drm_atomic_state *): %p\n", $old_state);
+    printf("│ └─ Flags: 0x%x\n", $flags);
+    printf("│\n");
+    
+    // Store entry time for duration calculation
+    @entry_time[tid] = nsecs;
+}
+
+fexit:drm_kms_helper:drm_atomic_helper_commit_planes {
+    if (@entry_time[tid] > 0) {
+        $duration_ns = nsecs - @entry_time[tid];
+        $duration_us = $duration_ns / 1000;
+        
+        printf("│ [%s] drm_atomic_helper_commit_planes() EXIT\n", strftime("%H:%M:%S.%f", nsecs));
+        printf("│ Duration: %lu ns (%lu μs)\n", $duration_ns, $duration_us);
+        printf("└─────────────────────────────────────────────────────────────────\n\n");
+        
+        // Update statistics
+        @total_duration_ns += $duration_ns;
+        @min_duration_ns = @min_duration_ns == 0 ? $duration_ns : 
+                           ($duration_ns < @min_duration_ns ? $duration_ns : @min_duration_ns);
+        @max_duration_ns = $duration_ns > @max_duration_ns ? $duration_ns : @max_duration_ns;
+        
+        // Clean up
+        delete(@entry_time[tid]);
+    }
+}
+
+// Track related atomic operations for context
+fentry:drm_kms_helper:drm_atomic_helper_commit {
+    printf(">>> Related: drm_atomic_helper_commit() called by %s (PID: %d)\n", comm, pid);
+}
+
+fentry:drm_kms_helper:drm_atomic_helper_commit_hw_done {
+    printf(">>> Related: drm_atomic_helper_commit_hw_done() called by %s (PID: %d)\n", comm, pid);
+}
+
+fentry:drm_kms_helper:drm_atomic_helper_commit_cleanup_done {
+    printf(">>> Related: drm_atomic_helper_commit_cleanup_done() called by %s (PID: %d)\n", comm, pid);
+}
+
+// Handle Ctrl+C gracefully
+END {
+    printf("\n=== DRM Atomic Helper Commit Planes Tracer Statistics ===\n");
+    printf("Script runtime: %lu seconds\n", (nsecs - @start_time) / 1000000000);
+    printf("Total traces: %lu\n", @trace_count);
+    
+    if (@trace_count > 0) {
+        printf("Average duration: %lu ns (%lu μs)\n", 
+               (uint64)@total_duration_ns / (uint64)@trace_count,
+               ((uint64)@total_duration_ns / (uint64)@trace_count) / 1000);
+        printf("Min duration: %lu ns (%lu μs)\n", @min_duration_ns, @min_duration_ns / 1000);
+        printf("Max duration: %lu ns (%lu μs)\n", @max_duration_ns, @max_duration_ns / 1000);
+    }
+    
+    printf("=========================================================\n");
+    
+    // Clean up all maps
+    clear(@trace_count);
+    clear(@start_time);
+    clear(@entry_time);
+    clear(@total_duration_ns);
+    clear(@min_duration_ns);
+    clear(@max_duration_ns);
+}

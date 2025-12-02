@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method4_page_flip/Module.symvers := sed 's/\.ko$$/\.o/' /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method4_page_flip/modules.order | scripts/mod/modpost -m -a  -o /home/carbon/Documents/WashU/bpf/ebpf/km_block/safe_methods/method4_page_flip/Module.symvers -e -i Module.symvers   -T -

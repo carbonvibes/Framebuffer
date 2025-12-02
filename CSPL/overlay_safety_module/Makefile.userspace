@@ -1,0 +1,41 @@
+# Makefile for blue overlay userspace program
+
+CC = gcc
+CFLAGS = -Wall -O2
+LIBS = -lX11
+
+# Target executable
+TARGET = blue_overlay
+
+# Source file
+SRC = blue_overlay.c
+
+# Default target
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRC) $(LIBS)
+
+# Clean target
+clean:
+	rm -f $(TARGET)
+
+# Install X11 development libraries (if needed)
+install-deps:
+	sudo apt-get update
+	sudo apt-get install -y libx11-dev
+
+# Test the overlay
+test: $(TARGET)
+	./$(TARGET)
+
+# Help
+help:
+	@echo "Available targets:"
+	@echo "  all         - Build the blue overlay program"
+	@echo "  clean       - Remove built files"
+	@echo "  install-deps- Install required X11 libraries"
+	@echo "  test        - Run the blue overlay test"
+	@echo "  help        - Show this help"
+
+.PHONY: all clean install-deps test help

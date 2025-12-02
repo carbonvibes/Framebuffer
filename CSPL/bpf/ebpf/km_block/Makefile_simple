@@ -1,0 +1,30 @@
+# Makefile for DRM Frame Blocker Kernel Module
+obj-m += drm_frame_blocker.o
+
+# Map the source file to the module object
+drm_frame_blocker-objs := kernel_simple.o
+
+KDIR := /lib/modules/$(shell uname -r)/build
+PWD := $(shell pwd)
+
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	rm -f *.order *.symvers
+
+install: all
+	sudo insmod drm_frame_blocker.ko
+
+uninstall:
+	sudo rmmod drm_frame_blocker
+
+# Debug target to show information
+info:
+	@echo "Kernel build directory: $(KDIR)"
+	@echo "Module directory: $(PWD)"
+	@echo "Source file: kernel_simple.c"
+	@echo "Module object: drm_frame_blocker.ko"
+
+.PHONY: all clean install uninstall info

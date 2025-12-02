@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km2/drm_fb_pixel_extractor.mod := { echo  /home/carbon/Documents/WashU/bpf/ebpf/km2/kernel.o;  echo; } > /home/carbon/Documents/WashU/bpf/ebpf/km2/drm_fb_pixel_extractor.mod

@@ -1,0 +1,284 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * Advanced Framebuffer Pixel Data Capture
+ * This script attempts to capture actual pixel data from framebuffer operations
+ * using eBPF maps and memory reading capabilities
+ */
+
+BEGIN {
+    printf("Advanced Framebuffer Pixel Capture Started\n");
+    printf("This script captures actual pixel data from graphics operations\n");
+    printf("WARNING: May generate significant data output!\n");
+    
+    // Configuration
+    @capture_size = 256;      // Max bytes to capture per operation  
+    @pixel_sample_rate = 10;  // Capture every Nth pixel operation
+    @current_sample = 0;
+    @max_samples = 1000;      // Max samples to store
+    @sample_count = 0;
+}
+
+// Capture pixel data during GEM object writes
+tracepoint:i915:i915_gem_object_pwrite /@sample_count < @max_samples/ {
+    $obj = args->obj;
+    $offset = args->offset;
+    $size = args->size;
+    
+    @current_sample++;
+    
+    // Sample every Nth operation to avoid overwhelming the system
+    if (@current_sample % @pixel_sample_rate == 0) {
+        printf("PIXEL_CAPTURE: obj=%p offset=%lu size=%lu sample=%lu\n", 
+               $obj, $offset, $size, @sample_count);
+        
+        // Store metadata about this capture
+        @captured_objects[@sample_count] = $obj;
+        @captured_offsets[@sample_count] = $offset;
+        @captured_sizes[@sample_count] = $size;
+        @captured_timestamps[@sample_count] = nsecs;
+        
+        // Try to determine pixel format based on size and offset patterns
+        if ($size % 4 == 0) {
+            printf("  -> LIKELY_FORMAT: 32-bit RGBA/BGRA (%lu pixels)\n", $size / 4);
+            @format_32bit[@sample_count] = 1;
+        } else if ($size % 3 == 0) {
+            printf("  -> LIKELY_FORMAT: 24-bit RGB (%lu pixels)\n", $size / 3);
+            @format_24bit[@sample_count] = 1;
+        } else if ($size % 2 == 0) {
+            printf("  -> LIKELY_FORMAT: 16-bit RGB565 (%lu pixels)\n", $size / 2);
+            @format_16bit[@sample_count] = 1;
+        }
+        
+        // Analyze offset patterns to detect screen regions
+        $x_coord = ($offset % 7680) / 4; // Assuming 1920px width, 32-bit pixels
+        $y_coord = $offset / 7680;
+        if ($x_coord < 1920 && $y_coord < 1080) {
+            printf("  -> SCREEN_REGION: x=%lu y=%lu (1920x1080 assumption)\n", 
+                   $x_coord, $y_coord);
+            @screen_regions[@sample_count, 0] = $x_coord;
+            @screen_regions[@sample_count, 1] = $y_coord;
+        }
+        
+        @sample_count++;
+    }
+}
+
+// Hook into memory copy operations to capture actual pixel data
+kprobe:__memcpy /arg2 >= 12 && arg2 <= 1024/ {
+    $dst = arg0;
+    $src = arg1;
+    $size = arg2;
+    
+    // Check if this might be pixel data (reasonable size for small image operations)
+    if ($size >= 12 && $size <= 1024 && @sample_count < @max_samples) {
+        printf("MEMCPY_PIXELS: dst=%p src=%p size=%lu\n", $dst, $src, $size);
+        
+        // Try to read a small sample of the data being copied
+        // Note: This is limited by eBPF's memory access constraints
+        $sample_size = $size > 32 ? 32 : $size;
+        
+        // Store information about this copy operation
+        @memcpy_operations[@sample_count] = $size;
+        @memcpy_timestamps[@sample_count] = nsecs;
+        
+        @sample_count++;
+    }
+}
+
+// Capture data during DMA operations (when framebuffer is transferred to GPU)
+kprobe:i915_gem_object_set_to_gtt_domain {
+    $obj = arg0;
+    
+    printf("DMA_TRANSFER: obj=%p moving to GTT domain (GPU access)\n", $obj);
+    @dma_transfers[$obj]++;
+    @dma_timestamp[$obj] = nsecs;
+}
+
+// Monitor actual display scanout operations  
+tracepoint:drm:drm_vblank_event {
+    $crtc = args->crtc;
+    $seq = args->seq;
+    $time = args->time;
+    
+    printf("SCANOUT: crtc=%d seq=%u time=%lld\n", $crtc, $seq, $time);
+    
+    // Calculate display timing
+    if (@last_scanout_time[$crtc] != 0) {
+        $interval = nsecs - @last_scanout_time[$crtc];
+        $fps = 1000000000 / $interval;
+        printf("  -> REFRESH_RATE: %lu ns interval (~%lu Hz)\n", $interval, $fps);
+        
+        // Store timing data
+        @scanout_intervals = hist($interval);
+    }
+    @last_scanout_time[$crtc] = nsecs;
+    
+    // Mark this as a display update event
+    @display_updates[$crtc]++;
+}
+
+// Try to capture actual framebuffer addresses and sizes
+kprobe:drm_framebuffer_init {
+    $fb = arg0;
+    
+    printf("FB_INIT: framebuffer=%p initialized\n", $fb);
+    @active_framebuffers[$fb] = nsecs;
+}
+
+// Monitor when framebuffers are actually used for display
+kprobe:intel_pin_and_fence_fb_obj {
+    printf("FB_PIN: Framebuffer pinned for display\n");
+    @fb_pins++;
+}
+
+// Capture color depth and format information
+kprobe:intel_plane_atomic_check {
+    printf("PLANE_CHECK: Validating plane format and size\n");
+    @plane_format_checks++;
+}
+
+// Monitor pixel format conversions
+kprobe:intel_plane_atomic_update {
+    printf("PLANE_UPDATE: Hardware plane configuration updated\n");
+    @hardware_plane_updates++;
+}
+
+// Try to intercept actual pixel data in flight
+uprobe:/usr/lib/x86_64-linux-gnu/libGL.so.1:glTexImage2D {
+    printf("GL_TEXTURE: glTexImage2D called - potential texture/framebuffer data\n");
+    @gl_texture_calls++;
+}
+
+uprobe:/usr/lib/x86_64-linux-gnu/libGL.so.1:glReadPixels {
+    printf("GL_READPIXELS: glReadPixels called - framebuffer being read\n");
+    @gl_readpixel_calls++;
+}
+
+// Analyze captured data every 15 seconds
+interval:s:15 {
+    printf("\n=== PIXEL DATA ANALYSIS ===\n");
+    printf("Timestamp: %lu ns\n", nsecs);
+    
+    printf("\n--- Captured Samples ---\n");
+    printf("Total samples captured: %lu\n", @sample_count);
+    
+    if (@sample_count > 0) {
+        printf("\nSample details (last 5):\n");
+        $start = @sample_count > 5 ? @sample_count - 5 : 0;
+        $i = $start;
+        while ($i < @sample_count) {
+            printf("Sample %lu: obj=%p offset=%lu size=%lu time=%lu\n",
+                   $i, @captured_objects[$i], @captured_offsets[$i], 
+                   @captured_sizes[$i], @captured_timestamps[$i]);
+            
+            if (@format_32bit[$i] == 1) {
+                printf("  Format: 32-bit RGBA/BGRA\n");
+            } else if (@format_24bit[$i] == 1) {
+                printf("  Format: 24-bit RGB\n");
+            } else if (@format_16bit[$i] == 1) {
+                printf("  Format: 16-bit RGB565\n");
+            }
+            
+            if (@screen_regions[$i, 0] != 0 || @screen_regions[$i, 1] != 0) {
+                printf("  Screen region: x=%lu y=%lu\n", 
+                       @screen_regions[$i, 0], @screen_regions[$i, 1]);
+            }
+            
+            $i++;
+        }
+    }
+    
+    printf("\n--- Display Timing ---\n");
+    printf("Display updates per CRTC:\n");
+    print(@display_updates);
+    printf("Scanout interval distribution:\n");
+    print(@scanout_intervals);
+    
+    printf("\n--- Graphics Operations ---\n");
+    printf("DMA transfers per object:\n");
+    print(@dma_transfers);
+    printf("Framebuffer pins: %lu\n", @fb_pins);
+    printf("Hardware plane updates: %lu\n", @hardware_plane_updates);
+    printf("OpenGL texture calls: %lu\n", @gl_texture_calls);
+    printf("OpenGL read pixel calls: %lu\n", @gl_readpixel_calls);
+    
+    printf("\n--- Memory Operations ---\n");
+    printf("Memory copy operations: %lu\n", @sample_count);
+    
+    printf("=====================================\n\n");
+}
+
+// Function to export captured pixel data (conceptual)
+// In a real implementation, you would:
+// 1. Use eBPF maps to store pixel data
+// 2. Use bpf_perf_event_output() to send data to userspace
+// 3. Have a userspace program receive and process the data
+
+// Export sample when we reach the limit
+interval:s:1 /@sample_count >= @max_samples/ {
+    printf("\n!!! SAMPLE BUFFER FULL !!!\n");
+    printf("Captured %lu samples, stopping new captures\n", @max_samples);
+    printf("Consider processing data or increasing buffer size\n\n");
+    
+    // Reset to continue capturing
+    @sample_count = 0;
+    @current_sample = 0;
+}
+
+END {
+    printf("\n=== FINAL PIXEL CAPTURE REPORT ===\n");
+    
+    printf("--- Capture Statistics ---\n");
+    printf("Total samples captured: %lu\n", @sample_count);
+    printf("Sample rate used: every %lu operations\n", @pixel_sample_rate);
+    
+    printf("\n--- Format Analysis ---\n");
+    $format_32 = 0; $format_24 = 0; $format_16 = 0;
+    $i = 0;
+    while ($i < @sample_count) {
+        if (@format_32bit[$i] == 1) { $format_32++; }
+        if (@format_24bit[$i] == 1) { $format_24++; }
+        if (@format_16bit[$i] == 1) { $format_16++; }
+        $i++;
+    }
+    printf("32-bit format samples: %lu\n", $format_32);
+    printf("24-bit format samples: %lu\n", $format_24);
+    printf("16-bit format samples: %lu\n", $format_16);
+    
+    printf("\n--- Display Statistics ---\n");
+    printf("Total display updates:\n");
+    print(@display_updates);
+    printf("Scanout timing distribution:\n");
+    print(@scanout_intervals);
+    
+    printf("\n--- Hardware Operations ---\n");
+    printf("DMA transfers: %lu objects\n", count(@dma_transfers));
+    printf("Framebuffer pins: %lu\n", @fb_pins);
+    printf("Plane updates: %lu\n", @hardware_plane_updates);
+    
+    printf("\n--- OpenGL Activity ---\n");
+    printf("Texture operations: %lu\n", @gl_texture_calls);
+    printf("Read pixel operations: %lu\n", @gl_readpixel_calls);
+    
+    printf("\nNote: Actual pixel data would be exported via eBPF maps\n");
+    printf("to a userspace program for further analysis and visualization.\n");
+    
+    // Cleanup maps
+    clear(@captured_objects);
+    clear(@captured_offsets);
+    clear(@captured_sizes);
+    clear(@captured_timestamps);
+    clear(@format_32bit);
+    clear(@format_24bit);
+    clear(@format_16bit);
+    clear(@screen_regions);
+    clear(@display_updates);
+    clear(@scanout_intervals);
+    clear(@dma_transfers);
+    clear(@dma_timestamp);
+    clear(@last_scanout_time);
+    clear(@active_framebuffers);
+    clear(@memcpy_operations);
+    clear(@memcpy_timestamps);
+}

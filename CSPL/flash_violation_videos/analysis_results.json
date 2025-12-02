@@ -1,0 +1,840 @@
+[
+  {
+    "filename": "mega_circle_michelson_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 160,
+      "absolute_violations": 0,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.846873231509858,
+      "max": 1.0,
+      "avg": 0.8723943595915487
+    }
+  },
+  {
+    "filename": "mega_cross_michelson_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 0,
+      "flash_rate_per_second": 0.0,
+      "michelson_violations": 0,
+      "absolute_violations": 0,
+      "violates_guidelines": false
+    },
+    "sample_flashes": [],
+    "luminance_range": {
+      "min": 0.34180615124336905,
+      "max": 0.4003001371188313,
+      "avg": 0.35159405341250066
+    }
+  },
+  {
+    "filename": "mega_diamond_absolute_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 0,
+      "absolute_violations": 160,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.03189077253562511,
+          0.9998171271232754,
+          0.03188563204492209
+        ],
+        "violation_types": [
+          "absolute",
+          0.9679263545876503,
+          "absolute",
+          0.9679314950783533
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.03188479526660452,
+          0.9998180191387359,
+          0.031887186095783365
+        ],
+        "violation_types": [
+          "absolute",
+          0.9679332238721314,
+          "absolute",
+          0.9679308330429526
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.03189077253562511,
+          0.9998171271232754,
+          0.03188563204492209
+        ],
+        "violation_types": [
+          "absolute",
+          0.9679263545876503,
+          "absolute",
+          0.9679314950783533
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.03188479526660452,
+          0.9998180191387359,
+          0.031887186095783365
+        ],
+        "violation_types": [
+          "absolute",
+          0.9679332238721314,
+          "absolute",
+          0.9679308330429526
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.03189077253562511,
+          0.9998171271232754,
+          0.03188563204492209
+        ],
+        "violation_types": [
+          "absolute",
+          0.9679263545876503,
+          "absolute",
+          0.9679314950783533
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.03188479526660452,
+      "max": 0.9998180191387359,
+      "avg": 0.1932082598012111
+    }
+  },
+  {
+    "filename": "mega_ellipse_absolute_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 0,
+      "absolute_violations": 160,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.03189603307301153,
+      "max": 1.0,
+      "avg": 0.19324669422750962
+    }
+  },
+  {
+    "filename": "mega_hexagon_absolute_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 0,
+      "absolute_violations": 160,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.03188814245673507,
+          0.9999036547844492,
+          0.03188826200303048
+        ],
+        "violation_types": [
+          "absolute",
+          0.9680155123277141,
+          "absolute",
+          0.9680153927814187
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.03188838154958732,
+          0.9999090071543644,
+          0.03188826200303048
+        ],
+        "violation_types": [
+          "absolute",
+          0.9680206256047771,
+          "absolute",
+          0.9680207451513339
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.03188814245673507,
+          0.9999036547844492,
+          0.03188826200303048
+        ],
+        "violation_types": [
+          "absolute",
+          0.9680155123277141,
+          "absolute",
+          0.9680153927814187
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.03188838154958732,
+          0.9999090071543644,
+          0.03188826200303048
+        ],
+        "violation_types": [
+          "absolute",
+          0.9680206256047771,
+          "absolute",
+          0.9680207451513339
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.03188814245673507,
+          0.9999036547844492,
+          0.03188826200303048
+        ],
+        "violation_types": [
+          "absolute",
+          0.9680155123277141,
+          "absolute",
+          0.9680153927814187
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.03188814245673507,
+      "max": 0.9999090071543644,
+      "avg": 0.19322466660406004
+    }
+  },
+  {
+    "filename": "mega_lightning_absolute_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 0,
+      "flash_rate_per_second": 0.0,
+      "michelson_violations": 0,
+      "absolute_violations": 0,
+      "violates_guidelines": false
+    },
+    "sample_flashes": [],
+    "luminance_range": {
+      "min": 0.007353722196615622,
+      "max": 0.07253589868222605,
+      "avg": 0.018220862320928167
+    }
+  },
+  {
+    "filename": "mega_octagon_absolute_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 0,
+      "absolute_violations": 160,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.03189603307301153,
+          1.0,
+          0.03189603307301153
+        ],
+        "violation_types": [
+          "absolute",
+          0.9681039669269884,
+          "absolute",
+          0.9681039669269884
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.03189603307301153,
+      "max": 1.0,
+      "avg": 0.19324669422750962
+    }
+  },
+  {
+    "filename": "mega_square_michelson_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 160,
+      "absolute_violations": 0,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.846873231509858,
+          1.0,
+          0.846873231509858
+        ],
+        "violation_types": [
+          "michelson",
+          0.08291135843955981,
+          "michelson",
+          0.08291135843955981
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.846873231509858,
+      "max": 1.0,
+      "avg": 0.8723943595915487
+    }
+  },
+  {
+    "filename": "mega_star_michelson_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 0,
+      "absolute_violations": 160,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.7587607057020012,
+          0.8944443190582427,
+          0.7589490545094388
+        ],
+        "violation_types": [
+          "absolute",
+          0.13568361335624157,
+          "absolute",
+          0.1354952645488039
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.7589353831136686,
+          0.8944276010066721,
+          0.7590485562170952
+        ],
+        "violation_types": [
+          "absolute",
+          0.13549221789300347,
+          "absolute",
+          0.13537904478957685
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.7588267765735672,
+          0.894377447945636,
+          0.7589482949836828
+        ],
+        "violation_types": [
+          "absolute",
+          0.13555067137206878,
+          "absolute",
+          0.13542915296195324
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.7589338640785619,
+          0.8944794275598641,
+          0.7589596879165804
+        ],
+        "violation_types": [
+          "absolute",
+          0.1355455634813022,
+          "absolute",
+          0.13551973964328368
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.7588267765735672,
+          0.894377447945636,
+          0.7589482949836828
+        ],
+        "violation_types": [
+          "absolute",
+          0.13555067137206878,
+          "absolute",
+          0.13542915296195324
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.7587607057020012,
+      "max": 0.8944794275598641,
+      "avg": 0.7815176937228699
+    }
+  },
+  {
+    "filename": "mega_triangle_michelson_4fps_violation.mp4",
+    "properties": {
+      "width": 640,
+      "height": 480,
+      "fps": 24.0,
+      "frame_count": 960,
+      "duration_seconds": 40.0
+    },
+    "violation_analysis": {
+      "total_flashes": 160,
+      "flash_rate_per_second": 4.0,
+      "michelson_violations": 160,
+      "absolute_violations": 0,
+      "violates_guidelines": true
+    },
+    "sample_flashes": [
+      {
+        "frame_start": 0,
+        "frame_end": 2,
+        "luminances": [
+          0.8441431375308066,
+          0.9965661440292839,
+          0.8441698068910859
+        ],
+        "violation_types": [
+          "michelson",
+          0.08280667024685799,
+          "michelson",
+          0.08279098208626809
+        ]
+      },
+      {
+        "frame_start": 6,
+        "frame_end": 8,
+        "luminances": [
+          0.8441657660473296,
+          0.9965857312288106,
+          0.8441714232317479
+        ],
+        "violation_types": [
+          "michelson",
+          0.08280311894735656,
+          "michelson",
+          0.08279979117708676
+        ]
+      },
+      {
+        "frame_start": 12,
+        "frame_end": 14,
+        "luminances": [
+          0.8441528354231319,
+          0.9965723762956833,
+          0.8441811213136307
+        ],
+        "violation_types": [
+          "michelson",
+          0.08280407086412778,
+          "michelson",
+          0.08278743198368026
+        ]
+      },
+      {
+        "frame_start": 18,
+        "frame_end": 20,
+        "luminances": [
+          0.8441811213136307,
+          0.996568814997814,
+          0.844184354022034
+        ],
+        "violation_types": [
+          "michelson",
+          0.08278565745303941,
+          "michelson",
+          0.08278375587799244
+        ]
+      },
+      {
+        "frame_start": 24,
+        "frame_end": 26,
+        "luminances": [
+          0.8441528354231319,
+          0.9965723762956833,
+          0.8441811213136307
+        ],
+        "violation_types": [
+          "michelson",
+          0.08280407086412778,
+          "michelson",
+          0.08278743198368026
+        ]
+      }
+    ],
+    "luminance_range": {
+      "min": 0.8441431375308066,
+      "max": 0.9965857312288106,
+      "avg": 0.8695777424745291
+    }
+  }
+]

@@ -1,0 +1,1 @@
+cmd_/home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.ko := ld -r  -m elf_x86_64 -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.ko /home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.o /home/carbon/Documents/WashU/bpf/ebpf/km/drm_fb_extractor.mod.o;  true
