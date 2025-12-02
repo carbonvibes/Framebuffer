@@ -418,3 +418,9 @@ Doing this reduced the latency to around 60ms, which is significantly better tha
 
 ### Current Work:
 I think that blocking a frame once our detection algorithm flags it isn’t feasible in the current setup. We’re already about 60 ms thats roughly four frames behind what’s actually being scanned out. By the time we receive a frame for analysis, four newer frames are either on-screen or in the pipeline, so even if the detection algo takes sub-16 ms decision it still arrives too late to stop that frame (and several successors) from appearing. I think stopping a frame after it has already been queued for scan-out is almost impossible and needs to implemented in the driver level ig. A more practical strategy is to draw a cursor style overlay plane that masks the malicious frame content instead of trying to block the frame itself. I’m working on getting that overlay approach working. I'm currently also exploring the possibility of delaying the frame from getting scanned out on the subsequent vblank event.
+
+### Workaround:
+1. Screen Freeze
+2. Reduce Refresh Rate to 1HZ
+3. Overlay
+4. Screen Dimming
